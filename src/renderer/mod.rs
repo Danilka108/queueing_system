@@ -56,7 +56,7 @@ impl Renderer for GraphRenderer {
         .build(vec![
             Box::new(ServiceParams {
                 buffer_size: 4,
-                handling_time_distribution: TestDistr::new(1.25),
+                handling_time_distribution: ExpDistr::new(1.25),
             }),
             Box::new(ServiceParams {
                 buffer_size: 2,
@@ -64,9 +64,8 @@ impl Renderer for GraphRenderer {
             }),
         ]);
 
-        let max_x = 5000.0;
-        let (max_y, graph_points) = GraphGenerator::new(pipeline).generate(max_x, 5.0);
-        dbg!(graph_points.last());
+        let max_x = 10000.0;
+        let (max_y, graph_points) = GraphGenerator::new(pipeline).generate(max_x, 10.0);
 
         let graph_points = graph_points
             .into_iter()

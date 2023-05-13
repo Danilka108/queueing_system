@@ -28,7 +28,6 @@ where
 
         loop {
             if x_i > max_x {
-                dbg!(&self.pipeline);
                 break;
             }
 
@@ -41,8 +40,8 @@ where
             self.pipeline.reset();
 
             let requests = self.pipeline.work_during(Time::from(x_i));
-            dbg!(requests.len());
             let requests_num = requests.len() as f32;
+
             let average_time = requests
                 .into_iter()
                 .map(|req| f32::from(req.leaving_time - req.arrival_time))
