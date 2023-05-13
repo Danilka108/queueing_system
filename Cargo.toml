@@ -1,0 +1,15 @@
+[package]
+name = "queueing_system"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pipeline = { path = "pipeline" }
+rand = "0.8.5"
+gl = { path="gl" }
+winit = "0.28.4"
+glutin = "0.30.7"
+gl_window_provider = { path="gl_window_provider" }
+glam = "0.24.0"
