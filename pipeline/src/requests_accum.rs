@@ -1,6 +1,7 @@
-use crate::node::{BlockedError, PipelineNode};
+use crate::node::{BlockedError, PipelineNode, PipelineNodeStatistics};
 use crate::request::Request;
 use crate::Time;
+use std::slice::Iter;
 use std::{cell::RefCell, rc::Rc};
 
 pub(crate) fn requests_accum<'node>() -> (RequestsAccum, Box<dyn PipelineNode + 'node>) {
@@ -23,6 +24,10 @@ impl RequestsAccum {
     pub fn to_vec(&self) -> Vec<Request> {
         self.0.borrow().iter().copied().collect()
     }
+
+    pub fn iter(&self) -> std::vec::IntoIter<Request> {
+        self.0.borrow().clone().into_iter()
+    }
 }
 
 struct RequestsAccumNode(Rc<RefCell<Vec<Request>>>);
@@ -35,12 +40,12 @@ impl std::fmt::Debug for RequestsAccumNode {
 
 impl PipelineNode for RequestsAccumNode {
     fn push_request(&mut self, _: &mut Time, request: Request) -> Result<(), BlockedError> {
-        self.push_stuck_request(request)
-    }
-
-    fn push_stuck_request(&mut self, request: Request) -> Result<(), BlockedError> {
         (*self.0).borrow_mut().push(request);
         Ok(())
+    }
+
+    fn get_statistics(&self) -> Vec<PipelineNodeStatistics> {
+        Vec::new()
     }
 
     fn reset(&mut self) {}

@@ -5,7 +5,7 @@ use std::{fmt::Debug, ops::ControlFlow};
 
 use self::handler::Handler;
 use pipeline::{
-    node::{BlockedError, IntoPipelineNode, PipelineNode},
+    node::{BlockedError, IntoPipelineNode, PipelineNode, PipelineNodeStatistics},
     Request, Time,
 };
 
@@ -85,8 +85,13 @@ where
         self.handler.add(request).map_err(|_| BlockedError)
     }
 
-    fn push_stuck_request(&mut self, request: Request) -> Result<(), BlockedError> {
-        self.handler.add(request).map_err(|_| BlockedError)
+    fn get_statistics(&self) -> Vec<PipelineNodeStatistics> {
+        let mut statistics = vec![PipelineNodeStatistics {
+            idle_time: f32::from(self.idle_time),
+        }];
+        statistics.append(&mut self.next.get_statistics());
+
+        statistics
     }
 
     fn reset(&mut self) {

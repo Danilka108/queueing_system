@@ -59,7 +59,9 @@ impl Renderer for GraphRenderer {
             mean,
             deviation,
             points,
-        } = GraphGenerator::new(pipeline, max_x, 10.0).generate();
+        } = GraphGenerator::new(pipeline, true, max_x, 10.0).generate();
+
+        dbg!(mean, deviation);
 
         let graph_points = points
             .into_iter()

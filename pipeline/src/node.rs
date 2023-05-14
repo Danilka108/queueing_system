@@ -2,12 +2,17 @@ use crate::{request::Request, Time};
 use rand::Rng;
 use std::fmt::Debug;
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PipelineNodeStatistics {
+    pub idle_time: f32,
+}
+
 pub trait PipelineNode: Debug {
     fn push_request(&mut self, delta_time: &mut Time, request: Request) -> Result<(), BlockedError>;
 
-    fn push_stuck_request(&mut self, request: Request) -> Result<(), BlockedError>;
-
     fn reset(&mut self);
+
+    fn get_statistics(&self) -> Vec<PipelineNodeStatistics>;
 }
 
 pub trait IntoPipelineNode<R>
