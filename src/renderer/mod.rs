@@ -9,33 +9,21 @@ use gl_window_provider::Renderer;
 use pipeline::{PipelineParams, Time};
 use rand::{prelude::Distribution, thread_rng};
 
-use crate::{exp_distr::ExpDistr, graph_generator::GraphGenerator, service::ServiceParams};
+use crate::{
+    exp_distr::ExpDistr,
+    graph_generator::{Graph, GraphGenerator},
+    service::ServiceParams,
+};
 
 use self::{
     array::VerticesArray,
     shader_program::{ShaderProgram, ShaderProgramBuilder},
 };
 
-#[derive(Debug)]
-struct TestDistr {
-    mean: f32,
-}
-
-impl TestDistr {
-    fn new(mean: f32) -> Self {
-        Self { mean }
-    }
-}
-
-impl Distribution<Time> for TestDistr {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Time {
-        Time::from(self.mean)
-    }
-}
-
 pub(crate) struct GraphRenderer {
     gl: gl::Gl,
-    points_array: VerticesArray,
+    graph_points_array: VerticesArray,
+    lines_points_array: VerticesArray,
     program: ShaderProgram,
 }
 
@@ -65,15 +53,34 @@ impl Renderer for GraphRenderer {
         ]);
 
         let max_x = 10000.0;
-        let (max_y, graph_points) = GraphGenerator::new(pipeline).generate(max_x, 10.0);
+        let Graph {
+            max_x,
+            max_y,
+            mean,
+            deviation,
+            points,
+        } = GraphGenerator::new(pipeline, max_x, 10.0).generate();
 
-        let graph_points = graph_points
+        let graph_points = points
             .into_iter()
-            .map(|(x, y)| (x / max_x, y / max_y))
+            .map(|(x, y)| (x / max_x, y / max_y, 1.0f32, 0.65f32, 0.0f32))
             .collect::<Vec<_>>();
+        let graph_points_array = VerticesArray::new(gl.clone(), &graph_points);
 
-        let points_array = VerticesArray::new(gl.clone(), graph_points);
-        points_array.use_array();
+        let lines_points: &[(f32, f32, f32, f32, f32)] = &[
+            (0.0, mean / max_y, 0.0, 0.65, 1.0),
+            (1.0, mean / max_y, 0.0, 0.65, 1.0),
+            (0.0, (mean + deviation) / max_y, 0.0, 0.65, 1.0),
+            (1.0, (mean + deviation) / max_y, 0.0, 0.65, 1.0),
+            (0.0, (mean - deviation) / max_y, 0.0, 0.65, 1.0),
+            (1.0, (mean - deviation) / max_y, 0.0, 0.65, 1.0),
+            (0.0, 0.0, 1.0, 0.0, 0.0),
+            (1.0, 0.0, 1.0, 0.0, 0.0),
+            (0.0, 0.0, 1.0, 0.0, 0.0),
+            (0.0, 1.0, 1.0, 0.0, 0.0),
+        ];
+
+        let lines_points_array = VerticesArray::new(gl.clone(), lines_points);
 
         let program = ShaderProgramBuilder::new(gl.clone())
             .vertex_shader(include_bytes!("./program/vertex_shader.glsl"))
@@ -81,26 +88,75 @@ impl Renderer for GraphRenderer {
             .build()
             .unwrap();
 
-        let x_attrib_pos = program.attrib_location_of("x");
-        let y_attrib_pos = program.attrib_location_of("y");
+        let x_attrib_pos = program.attrib_location_of("iX");
+        let y_attrib_pos = program.attrib_location_of("iY");
+        let color_attrib_pos = program.attrib_location_of("iColor");
 
-        points_array.set_attrib_pointer(
+        graph_points_array.use_array();
+
+        graph_points_array.set_attrib_pointer(
             x_attrib_pos,
             array::AttribPointer {
                 size: array::Size::One,
-                stride: 2 * std::mem::size_of::<f32>(),
+                stride: 5 * std::mem::size_of::<f32>(),
                 offset: 0,
                 ty: gl::FLOAT,
             },
             false,
         );
 
-        points_array.set_attrib_pointer(
+        graph_points_array.set_attrib_pointer(
             y_attrib_pos,
             array::AttribPointer {
                 size: array::Size::One,
-                stride: 2 * std::mem::size_of::<f32>(),
+                stride: 5 * std::mem::size_of::<f32>(),
                 offset: std::mem::size_of::<f32>(),
+                ty: gl::FLOAT,
+            },
+            false,
+        );
+
+        graph_points_array.set_attrib_pointer(
+            color_attrib_pos,
+            array::AttribPointer {
+                size: array::Size::Three,
+                stride: 5 * std::mem::size_of::<f32>(),
+                offset: 2 * std::mem::size_of::<f32>(),
+                ty: gl::FLOAT,
+            },
+            false,
+        );
+
+        lines_points_array.use_array();
+
+        lines_points_array.set_attrib_pointer(
+            x_attrib_pos,
+            array::AttribPointer {
+                size: array::Size::One,
+                stride: 5 * std::mem::size_of::<f32>(),
+                offset: 0,
+                ty: gl::FLOAT,
+            },
+            false,
+        );
+
+        lines_points_array.set_attrib_pointer(
+            y_attrib_pos,
+            array::AttribPointer {
+                size: array::Size::One,
+                stride: 5 * std::mem::size_of::<f32>(),
+                offset: std::mem::size_of::<f32>(),
+                ty: gl::FLOAT,
+            },
+            false,
+        );
+
+        lines_points_array.set_attrib_pointer(
+            color_attrib_pos,
+            array::AttribPointer {
+                size: array::Size::Three,
+                stride: 5 * std::mem::size_of::<f32>(),
+                offset: 2 * std::mem::size_of::<f32>(),
                 ty: gl::FLOAT,
             },
             false,
@@ -108,7 +164,8 @@ impl Renderer for GraphRenderer {
 
         Self {
             gl,
-            points_array,
+            graph_points_array,
+            lines_points_array,
             program,
         }
     }
@@ -119,12 +176,18 @@ impl Renderer for GraphRenderer {
             self.gl.Clear(gl::COLOR_BUFFER_BIT);
         }
 
-        self.points_array.use_array();
         self.program.use_program();
 
+        self.graph_points_array.use_array();
         unsafe {
             self.gl
-                .DrawArrays(gl::LINE_STRIP, 0, self.points_array.len() as i32);
+                .DrawArrays(gl::LINE_STRIP, 0, self.graph_points_array.len() as i32);
+        }
+
+        self.lines_points_array.use_array();
+        unsafe {
+            self.gl
+                .DrawArrays(gl::LINES, 0, self.lines_points_array.len() as i32);
         }
     }
 

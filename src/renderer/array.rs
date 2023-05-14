@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct AttribLocation(gl::types::GLuint);
 
 impl AttribLocation {
@@ -28,7 +29,7 @@ pub struct VerticesArray {
 }
 
 impl VerticesArray {
-    pub fn new<T>(gl: gl::Gl, data: Vec<T>) -> Self {
+    pub fn new<T>(gl: gl::Gl, data: &[T]) -> Self {
         unsafe {
             let mut vao = 0;
             gl.GenVertexArrays(1, &mut vao);

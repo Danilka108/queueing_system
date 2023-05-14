@@ -1,8 +1,12 @@
 #version 330 core
 
-in float x;
-in float y;
+in float iX;
+in float iY;
+in vec3 iColor;
+
+out vec3 Color;
 
 void main() {
-  gl_Position = vec4(x - 0.5, y - 0.5, 0.0, 1.0);
+  gl_Position = vec4(iX - 0.5, iY - 0.5, 0.0, 1.0);
+  Color = iColor;
 }
